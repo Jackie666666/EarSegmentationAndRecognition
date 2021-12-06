@@ -1,73 +1,87 @@
-import cv2
+import tensorflow as tf
 import numpy as np
-import glob
+import matplotlib.pyplot as plt
+import pathlib
 import os
-from pathlib import Path
+from tensorflow import keras
 import json
-from preprocessing.preprocess import Preprocess
-from metrics.evaluation import Evaluation
+from preprocessing.preprocess import load_image
+from tqdm import tqdm
 
-class EvaluateAll:
+BASE_PATH = "./data"
 
-    def __init__(self):
-        os.chdir(os.path.dirname(os.path.realpath(__file__)))
+TEST_DATA_FOLDER = pathlib.Path(BASE_PATH + "/test")
+TEST_MASK_FOLDER = pathlib.Path(BASE_PATH + "/annotations/segmentation/train")
+BATCH_SIZE = 8
 
-        with open('config.json') as config_file:
-            config = json.load(config_file)
+IMAGE_HEIGHT = 224
+IMAGE_WIDTH = 224
 
-        self.images_path = config['images_path']
-        self.annotations_path = config['annotations_path']
+MODEL_NAME = "UNet-MobileNetV2"
 
-    def get_annotations(self, annot_name):
-            with open(annot_name) as f:
-                lines = f.readlines()
-                annot = []
-                for line in lines:
-                    l_arr = line.split(" ")[1:5]
-                    l_arr = [int(i) for i in l_arr]
-                    annot.append(l_arr)
-            return annot
+def display(display_list):
+    plt.figure(figsize=(15, 15))
 
-    def run_evaluation(self):
+    title = ['Input Image', 'True Mask', 'Predicted Mask']
 
-        im_list = sorted(glob.glob(self.images_path + '/*.png', recursive=True))
-        iou_arr = []
-        preprocess = Preprocess()
-        eval = Evaluation()
-        
-        # Change the following detector and/or add your detectors below
-        import detectors.cascade_detector.detector as cascade_detector
-        # import detectors.your_super_detector.detector as super_detector
-        cascade_detector = cascade_detector.Detector()
-        
+    for i in range(len(display_list)):
+        plt.subplot(1, len(display_list), i+1)
+        plt.title(title[i])
+        plt.imshow(tf.keras.utils.array_to_img(display_list[i]))
+        plt.axis('off')
+    plt.tight_layout()
+    plt.show()
 
-        for im_name in im_list:
-            
-            # Read an image
-            img = cv2.imread(im_name)
+def create_mask(pred_mask):
+    pred_mask = tf.argmax(pred_mask, axis=-1)
+    pred_mask = pred_mask[..., tf.newaxis]
+    return pred_mask[0]
 
-            # Apply some preprocessing
-            img = preprocess.histogram_equlization_rgb(img) # This one makes VJ worse
-            
-            # Run the detector. It runs a list of all the detected bounding-boxes. In segmentor you only get a mask matrices, but use the iou_compute in the same way.
-            prediction_list = cascade_detector.detect(img)
+def accuracy(trueMask, predMask):
+    tp = np.sum(np.logical_and(trueMask, predMask))
+    tn = np.sum((trueMask==0)&(predMask==0))
+    p = np.sum(trueMask == 1)
+    n = np.sum(trueMask == 0)
+    return (tp+tn)/(p+n)
 
-            # Read annotations:
-            annot_name = os.path.join(self.annotations_path, Path(os.path.basename(im_name)).stem) + '.txt'
-            annot_list = self.get_annotations(annot_name)
+def iou(trueMask, predMask):
+        intersection = np.logical_and(trueMask, predMask)
+        union = np.logical_or(trueMask, predMask)
+        return np.sum(intersection) / np.sum(union)
 
-            # Only for detection:
-            p, gt = eval.prepare_for_detection(prediction_list, annot_list)
-            
-            iou = eval.iou_compute(p, gt)
-            iou_arr.append(iou)
+def precision(trueMask, predMask):
+    predictedPositive = np.sum(predMask == 1)
+    truePositive = np.sum(np.logical_and(trueMask, predMask))
+    return truePositive/predictedPositive if predictedPositive>0 else 0
 
-        miou = np.average(iou_arr)
-        print("\n")
-        print("Average IOU:", f"{miou:.2%}")
-        print("\n")
+def recall(trueMask, predMask):
+    actualPositive = np.sum(trueMask == 1)
+    truePositive = np.sum(np.logical_and(trueMask, predMask))
+    return truePositive/actualPositive if actualPositive>0 else 0
 
 
-if __name__ == '__main__':
-    ev = EvaluateAll()
-    ev.run_evaluation()
+if __name__ == "__main__":
+    test_dataset = tf.data.Dataset.list_files(str(TEST_DATA_FOLDER/"*.png"))
+    test_images = test_dataset.map(lambda x: load_image(x, False, IMAGE_HEIGHT, IMAGE_WIDTH), num_parallel_calls=tf.data.AUTOTUNE)
+
+    model = keras.models.load_model(f"./detectors/checkpoints/{MODEL_NAME}/weights0050.h5")
+    
+    finalAccuracy = finalIoU = finalPrecision = finalRecall = 0
+    for element in tqdm(test_images.as_numpy_iterator()):
+        image, trueMask = element
+        imageToPredict = image[None, :,:,:]
+        predMask = model.predict(imageToPredict)
+        predMask = create_mask(predMask)
+        finalAccuracy += accuracy(trueMask, predMask)
+        finalIoU += iou(trueMask, predMask)
+        finalPrecision += precision(trueMask, predMask)
+        finalRecall += recall(trueMask, predMask)
+
+    finalAccuracy /= test_images.cardinality().numpy()
+    finalIoU /= test_images.cardinality().numpy()
+    finalPrecision /= test_images.cardinality().numpy()
+    finalRecall /= test_images.cardinality().numpy()
+    outString = f"{MODEL_NAME}\nAcc: {finalAccuracy}\nIoU: {finalIoU}\nPrecision: {finalPrecision}\nRecall: {finalRecall}"
+
+    with open(f"./results/{MODEL_NAME}.txt", "w+") as outFile:
+        outFile.write(outString)
