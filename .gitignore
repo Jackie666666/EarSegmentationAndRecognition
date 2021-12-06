@@ -148,3 +148,4 @@ data/
 Mask_RCNN/
 detectors/checkpoints/
 detectors/figures/
+EfficientUnet/

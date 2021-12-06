@@ -8,6 +8,9 @@ import tensorflow_addons as tfa
 import json
 from preprocessing.preprocess import  Augment, subset_dataset, load_image
 from detectors.my_detectors.UNet import UNet
+from detectors.my_detectors.DeepLabV3 import DeepLabV3
+from customLoss import dice_loss
+# from EfficientUnet.efficientunet.efficientunet import *
 
 BASE_PATH = "./data"
 
@@ -26,8 +29,9 @@ CURR_EPOCH = 0
 
 SAVE_FIGURES = True
 
-MODEL_NAME = "UNet-MobileNetV2"
+MODEL_NAME = "DepLabV3+-ResNet50-BinaryCrossEntropy"
 
+np.random.seed(0)
 
 def display(display_list):
     plt.figure(figsize=(15, 15))
@@ -43,9 +47,12 @@ def display(display_list):
     plt.savefig(f"./detectors/figures/{MODEL_NAME}/epoch{CURR_EPOCH}.jpg")
 
 def create_mask(pred_mask):
-    pred_mask = tf.argmax(pred_mask, axis=-1)
-    pred_mask = pred_mask[..., tf.newaxis]
-    return pred_mask[0]
+    # pred_mask = tf.argmax(pred_mask, axis=-1)
+    # pred_mask = pred_mask[..., tf.newaxis]
+    # return pred_mask[0]
+    pred_mask = pred_mask[0]
+    pred_mask = tf.where(pred_mask>0.5,1,0)
+    return pred_mask
 
 def show_predictions(dataset=None, num=1, sample_image=None, sample_mask=None):
     if dataset:
@@ -105,10 +112,13 @@ if __name__ == "__main__":
 
     val_batches = val_images.batch(BATCH_SIZE)
 
-    model = UNet(IMAGE_HEIGHT, IMAGE_WIDTH, IMAGE_CHANNELS).get_model()
+    model = DeepLabV3(IMAGE_HEIGHT, IMAGE_WIDTH, IMAGE_CHANNELS).get_model()
     model.compile(optimizer='adam',
-                loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
-                loss_weights=[1,200],
+                # loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+                # loss = tfa.losses.SigmoidFocalCrossEntropy(),
+                loss = tf.keras.losses.BinaryCrossentropy(from_logits=False),
+                # loss = dice_loss,
+                # loss_weights=[1,200],
                 metrics=['accuracy'])
 
     # tf.keras.utils.plot_model(model, show_shapes=True)
