@@ -10,7 +10,6 @@ from preprocessing.preprocess import  Augment, subset_dataset, load_image
 from detectors.my_detectors.UNet import UNet
 from detectors.my_detectors.DeepLabV3 import DeepLabV3
 from customLoss import dice_loss
-# from EfficientUnet.efficientunet.efficientunet import *
 
 BASE_PATH = "./data"
 
@@ -24,12 +23,12 @@ IMAGE_CHANNELS = 3
 
 VAL_RATIO = 0.85
 BATCH_SIZE = 8
-EPOCHS = 50
+EPOCHS = 30
 CURR_EPOCH = 0
 
 SAVE_FIGURES = True
 
-MODEL_NAME = "DepLabV3+-ResNet50-BinaryCrossEntropy"
+MODEL_NAME = "UNet-EfficientNetB0-FocalLoss"
 
 np.random.seed(0)
 
@@ -47,12 +46,12 @@ def display(display_list):
     plt.savefig(f"./detectors/figures/{MODEL_NAME}/epoch{CURR_EPOCH}.jpg")
 
 def create_mask(pred_mask):
-    # pred_mask = tf.argmax(pred_mask, axis=-1)
-    # pred_mask = pred_mask[..., tf.newaxis]
-    # return pred_mask[0]
-    pred_mask = pred_mask[0]
-    pred_mask = tf.where(pred_mask>0.5,1,0)
-    return pred_mask
+    pred_mask = tf.argmax(pred_mask, axis=-1)
+    pred_mask = pred_mask[..., tf.newaxis]
+    return pred_mask[0]
+    # pred_mask = pred_mask[0]
+    # pred_mask = tf.where(pred_mask>0.5,1,0)
+    # return pred_mask
 
 def show_predictions(dataset=None, num=1, sample_image=None, sample_mask=None):
     if dataset:
@@ -112,11 +111,17 @@ if __name__ == "__main__":
 
     val_batches = val_images.batch(BATCH_SIZE)
 
-    model = DeepLabV3(IMAGE_HEIGHT, IMAGE_WIDTH, IMAGE_CHANNELS).get_model()
+    # model = DeepLabV3(IMAGE_HEIGHT, IMAGE_WIDTH, IMAGE_CHANNELS).get_model()
+    model = UNet(IMAGE_HEIGHT, IMAGE_WIDTH, IMAGE_CHANNELS).get_model()
+
+    # penultimate_layer = model.layers[-1]  # layer that you want to connect your new FC layer to 
+    # new_top_layer = tf.keras.layers.Conv2D(1, 1, padding="same", activation="sigmoid")(penultimate_layer.output)  # create new FC layer and connect it to the rest of the model
+    # model = tf.keras.models.Model(model.input, new_top_layer)  # define your new model
+
     model.compile(optimizer='adam',
                 # loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
-                # loss = tfa.losses.SigmoidFocalCrossEntropy(),
-                loss = tf.keras.losses.BinaryCrossentropy(from_logits=False),
+                loss = tfa.losses.SigmoidFocalCrossEntropy(from_logits=False),
+                # loss = tf.keras.losses.BinaryCrossentropy(from_logits=False),
                 # loss = dice_loss,
                 # loss_weights=[1,200],
                 metrics=['accuracy'])

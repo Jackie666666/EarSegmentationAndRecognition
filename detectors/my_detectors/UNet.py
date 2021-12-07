@@ -1,9 +1,10 @@
 import tensorflow as tf
 import detectors.my_detectors.pix2pix as pix2pix
-from tensorflow.keras.layers import Conv2D, BatchNormalization, Activation, MaxPool2D, Conv2DTranspose, Concatenate, Input
-from tensorflow.keras.layers import AveragePooling2D, GlobalAveragePooling2D, UpSampling2D, Reshape, Dense
+from tensorflow.keras.layers import Conv2D, BatchNormalization, Activation, MaxPool2D, Conv2DTranspose, Concatenate, Input, Add
+from tensorflow.keras.layers import AveragePooling2D, GlobalAveragePooling2D, UpSampling2D, Reshape, Dense, LeakyReLU, MaxPooling2D, Dropout
 from tensorflow.keras.models import Model
 from tensorflow.keras.applications import EfficientNetB0, ResNet50
+from EfficientUnet.efficientunet.efficientunet import get_efficient_unet_b0
 
 class UNet():
     def __init__(self, imageH, imageW, imageC):
@@ -11,50 +12,12 @@ class UNet():
         self.image_width = imageW
         self.image_channels = imageC
 
-        # Unet-EfficientNetb0
-    def conv_block(self, inputs, num_filters):
-        x = Conv2D(num_filters, 3, padding="same")(inputs)
-        x = BatchNormalization()(x)
-        x = Activation("relu")(x)
-
-        x = Conv2D(num_filters, 3, padding="same")(x)
-        x = BatchNormalization()(x)
-        x = Activation("relu")(x)
-
-        return x
-
-    def decoder_block(self, inputs, skip, num_filters):
-        x = Conv2DTranspose(num_filters, (2, 2), strides=2, padding="same")(inputs)
-        x = Concatenate()([x, skip])
-        x = self.conv_block(x, num_filters)
-        return x
-
     def get_model(self):
-        #  Input 
-        inputs = Input((self.image_height, self.image_width, self.image_channels))
-
-        #  Pre-trained Encoder 
-        encoder = EfficientNetB0(include_top=False, weights="imagenet", input_tensor=inputs)
-        encoder.trainable = False
-        s1 = encoder.get_layer("input_1").output                      ## 256
-        s2 = encoder.get_layer("block2a_expand_activation").output    ## 128
-        s3 = encoder.get_layer("block3a_expand_activation").output    ## 64
-        s4 = encoder.get_layer("block4a_expand_activation").output    ## 32
-
-        #  Bottleneck 
-        b1 = encoder.get_layer("block6a_expand_activation").output    ## 16
-
-        #  Decoder 
-        d1 = self.decoder_block(b1, s4, 512)                               ## 32
-        d2 = self.decoder_block(d1, s3, 256)                               ## 64
-        d3 = self.decoder_block(d2, s2, 128)                               ## 128
-        d4 = self.decoder_block(d3, s1, 64)                                ## 256
-
-        #  Output 
-        outputs = Conv2D(1, 1, padding="same", activation="sigmoid")(d4)
-
-        model = Model(inputs, outputs, name="EfficientNetB0_UNET")
+        model = get_efficient_unet_b0((self.image_height, self.image_width, self.image_channels),
+            pretrained=True, block_type='transpose', concat_input=True, out_channels=2)
         return model
+ 
+
 """
     # Unet-MobileNet-FocalLoss
         self.encoder = self.get_encoder()

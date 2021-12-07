@@ -5,7 +5,9 @@ import pathlib
 import os
 from tensorflow import keras
 import json
+from tensorflow.python.ops.gen_array_ops import TensorStridedSliceUpdate
 import tensorflow_addons as tfa
+from detectors.my_detectors.UNet import UNet
 from preprocessing.preprocess import load_image
 from tqdm import tqdm
 from customLoss import dice_loss
@@ -19,7 +21,9 @@ BATCH_SIZE = 8
 IMAGE_HEIGHT = 224
 IMAGE_WIDTH = 224
 
-MODEL_NAME = "DepLabV3+-ResNet50-BinaryCrossEntropy"
+MODEL_NAME = "UNet-MobileNetV2-FocalLoss"
+SAVE = False
+VIZ = True
 
 def display(display_list):
     plt.figure(figsize=(15, 15))
@@ -50,9 +54,9 @@ def accuracy(trueMask, predMask):
     return (tp+tn)/(p+n)
 
 def iou(trueMask, predMask):
-        intersection = np.logical_and(trueMask, predMask)
-        union = np.logical_or(trueMask, predMask)
-        return np.sum(intersection) / np.sum(union)
+    intersection = np.logical_and(trueMask, predMask)
+    union = np.logical_or(trueMask, predMask)
+    return np.sum(intersection) / np.sum(union)
 
 def precision(trueMask, predMask):
     predictedPositive = np.sum(predMask == 1)
@@ -60,20 +64,44 @@ def precision(trueMask, predMask):
     return truePositive/predictedPositive if predictedPositive>0 else 0
 
 def recall(trueMask, predMask):
-    actualPositive = np.sum(trueMask == 1)
+    falseNegative = np.sum(np.logical_and(np.logical_not(predMask), trueMask))
     truePositive = np.sum(np.logical_and(trueMask, predMask))
-    return truePositive/actualPositive if actualPositive>0 else 0
+    return truePositive/(truePositive+falseNegative) if (truePositive+falseNegative)>0 else 0
 
-# def recall(gt, p):
-#     TP = np.sum(np.logical_and(p, gt))
-#     FN = np.sum(np.logical_and(np.logical_not(p), gt))
-#     try:
-#         if (TP+FN) > 0:
-#             return TP/(TP+FN)
-#         else:
-#             return 0
-#     except:
-#         return 0
+
+from skimage.color import rgb2gray
+
+def vizualize(maskPairs, n=3):
+    fig, ax = plt.subplots(2,n, figsize=(15,15))
+    for i in range(n):
+        iou, imageMaskPair = maskPairs[len(maskPairs)-i-1]
+        image, trueMask, predMask = imageMaskPair
+        rgbMask = np.zeros(image.shape)
+        predMask = np.squeeze(predMask)
+        rgbMask[predMask==1] = [1,0,0]
+        ax[0,i].imshow(rgb2gray(image), cmap="gray")
+        ax[0,i].imshow(rgbMask, alpha=0.5)
+        ax[0,i].title.set_text(f"IoU:{round(iou,3)}")
+        ax[0,i].axis("off")
+    
+    for i in range(n):
+        iou, imageMaskPair = maskPairs[i]
+        image, trueMask, predMask = imageMaskPair
+        rgbMask = np.zeros(image.shape)
+        predMask = np.squeeze(predMask)
+        rgbMask[predMask==1] = [1,0,0]
+        ax[1,i].imshow(rgb2gray(image), cmap="gray")
+        ax[1,i].imshow(rgbMask, alpha=0.5)
+        # rgbMaskTrue = np.zeros(image.shape)
+        # trueMask = np.squeeze(trueMask)
+        # rgbMaskTrue[trueMask==1] = [0,1,0]
+        # ax[1,i].imshow(rgbMaskTrue, alpha=0.2)
+        ax[1,i].title.set_text(f"IoU:{round(iou,3)}")
+        ax[1,i].axis("off")
+
+    fig.suptitle(f"Model: {MODEL_NAME}")
+    plt.tight_layout()
+    plt.savefig(f"./results/{MODEL_NAME}.jpg")
 
 
 if __name__ == "__main__":
@@ -84,7 +112,7 @@ if __name__ == "__main__":
     model = keras.models.load_model(f"./detectors/checkpoints/{MODEL_NAME}/weights0050.h5")
 
     # for SigmoidFocalCrossEntropy()
-    # model = keras.models.load_model(f"./detectors/checkpoints/{MODEL_NAME}/weights0050.h5", custom_objects={"loss": tfa.losses.SigmoidFocalCrossEntropy()})
+    model = keras.models.load_model(f"./detectors/checkpoints/{MODEL_NAME}/weights0050.h5", custom_objects={"loss": tfa.losses.SigmoidFocalCrossEntropy()})
     
     # for dice loss
     # model = keras.models.load_model(f"./detectors/checkpoints/{MODEL_NAME}/weights0050.h5", compile=False)
@@ -92,22 +120,39 @@ if __name__ == "__main__":
     #         loss = dice_loss,
     #         metrics=['accuracy'])
 
+    # Custom all (for efficientNet)
+    # model = UNet(IMAGE_HEIGHT, IMAGE_WIDTH, 3).get_model()
+    # model.load_weights(f"./detectors/checkpoints/{MODEL_NAME}/weights0030.h5")
+    # model.compile(optimizer="adam", loss=tf.losses.SparseCategoricalCrossentropy(from_logits=True), metrics=['accuracy'])
+    
     finalAccuracy = finalIoU = finalPrecision = finalRecall = 0
+    iouMaskPairs = []
+
     for element in tqdm(test_images.as_numpy_iterator()):
         image, trueMask = element
         imageToPredict = image[None, :,:,:]
         predMask = model.predict(imageToPredict)
         predMask = create_mask(predMask)
+       
         finalAccuracy += accuracy(trueMask, predMask)
-        finalIoU += iou(trueMask, predMask)
+        currentIoU = iou(trueMask, predMask)
+        finalIoU += currentIoU
         finalPrecision += precision(trueMask, predMask)
         finalRecall += recall(trueMask, predMask)
+        iouMaskPairs.append((currentIoU, [image, trueMask, predMask]))
+
 
     finalAccuracy /= test_images.cardinality().numpy()
     finalIoU /= test_images.cardinality().numpy()
     finalPrecision /= test_images.cardinality().numpy()
     finalRecall /= test_images.cardinality().numpy()
-    outString = f"{MODEL_NAME}\nAcc: {finalAccuracy}\nIoU: {finalIoU}\nPrecision: {finalPrecision}\nRecall: {finalRecall}"
+    finalF1 = (2*finalPrecision*finalRecall)/(finalPrecision+finalRecall) if (finalPrecision+finalRecall) > 0 else 0
+    outString = f"{MODEL_NAME}\nAcc: {finalAccuracy}\nIoU: {finalIoU}\nPrecision: {finalPrecision}\nRecall: {finalRecall}\nF1: {finalF1}"
     print(outString)
-    with open(f"./results/{MODEL_NAME}.txt", "w+") as outFile:
-        outFile.write(outString)
+    if SAVE:
+        with open(f"./results/{MODEL_NAME}.txt", "w+") as outFile:
+            outFile.write(outString)
+
+    if VIZ:
+        iouMaskPairs.sort(key=lambda x:x[0])
+        vizualize(iouMaskPairs, n=5)
