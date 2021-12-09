@@ -21,8 +21,8 @@ BATCH_SIZE = 8
 IMAGE_HEIGHT = 224
 IMAGE_WIDTH = 224
 
-MODEL_NAME = "UNet-MobileNetV2-FocalLoss"
-SAVE = False
+MODEL_NAME = "UNet-MobileNetV2-FL-FaceMask"
+SAVE = True
 VIZ = True
 
 def display(display_list):
@@ -109,7 +109,7 @@ if __name__ == "__main__":
     test_images = test_dataset.map(lambda x: load_image(x, False, IMAGE_HEIGHT, IMAGE_WIDTH), num_parallel_calls=tf.data.AUTOTUNE)
 
     # for regular loss
-    model = keras.models.load_model(f"./detectors/checkpoints/{MODEL_NAME}/weights0050.h5")
+    # model = keras.models.load_model(f"./detectors/checkpoints/{MODEL_NAME}/weights0050.h5")
 
     # for SigmoidFocalCrossEntropy()
     model = keras.models.load_model(f"./detectors/checkpoints/{MODEL_NAME}/weights0050.h5", custom_objects={"loss": tfa.losses.SigmoidFocalCrossEntropy()})
@@ -128,9 +128,23 @@ if __name__ == "__main__":
     finalAccuracy = finalIoU = finalPrecision = finalRecall = 0
     iouMaskPairs = []
 
+    # for element in tqdm(test_images.as_numpy_iterator()):
+    #     image, trueMask = element
+    #     imageToPredict = image[None, :,:,:]
+    #     predMask = model.predict(imageToPredict)
+    #     predMask = create_mask(predMask)
+       
+    #     finalAccuracy += accuracy(trueMask, predMask)
+    #     currentIoU = iou(trueMask, predMask)
+    #     finalIoU += currentIoU
+    #     finalPrecision += precision(trueMask, predMask)
+    #     finalRecall += recall(trueMask, predMask)
+    #     iouMaskPairs.append((currentIoU, [image, trueMask, predMask]))
+    
     for element in tqdm(test_images.as_numpy_iterator()):
-        image, trueMask = element
-        imageToPredict = image[None, :,:,:]
+        image, trueMask, faceMask = element
+        imageWithMask = tf.concat([image, faceMask], axis=-1)
+        imageToPredict = imageWithMask[None, :,:,:]
         predMask = model.predict(imageToPredict)
         predMask = create_mask(predMask)
        

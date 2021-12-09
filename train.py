@@ -4,9 +4,10 @@ import matplotlib.pyplot as plt
 import pathlib
 import os
 from tensorflow import keras
+from tensorflow._api.v2 import image
 import tensorflow_addons as tfa
 import json
-from preprocessing.preprocess import  Augment, subset_dataset, load_image
+from preprocessing.preprocess import  Augment, AugmentAdditionalMask, subset_dataset, load_image
 from detectors.my_detectors.UNet import UNet
 from detectors.my_detectors.DeepLabV3 import DeepLabV3
 from customLoss import dice_loss
@@ -14,21 +15,20 @@ from customLoss import dice_loss
 BASE_PATH = "./data"
 
 TRAIN_DATA_FOLDER = pathlib.Path(BASE_PATH + "/train")
-
 TRAIN_MASK_FOLDER = pathlib.Path(BASE_PATH + "/annotations/segmentation/train")
 
 IMAGE_HEIGHT = 224
 IMAGE_WIDTH = 224
-IMAGE_CHANNELS = 3
+IMAGE_CHANNELS = 4
 
 VAL_RATIO = 0.85
 BATCH_SIZE = 8
-EPOCHS = 30
+EPOCHS = 50
 CURR_EPOCH = 0
 
 SAVE_FIGURES = True
 
-MODEL_NAME = "UNet-EfficientNetB0-FocalLoss"
+MODEL_NAME = "UNet-MobileNetV2-FL-FaceMask"
 
 np.random.seed(0)
 
@@ -44,22 +44,31 @@ def display(display_list):
         plt.axis('off')
     plt.tight_layout()
     plt.savefig(f"./detectors/figures/{MODEL_NAME}/epoch{CURR_EPOCH}.jpg")
+    # plt.show()
 
 def create_mask(pred_mask):
-    pred_mask = tf.argmax(pred_mask, axis=-1)
-    pred_mask = pred_mask[..., tf.newaxis]
-    return pred_mask[0]
-    # pred_mask = pred_mask[0]
-    # pred_mask = tf.where(pred_mask>0.5,1,0)
-    # return pred_mask
+    # pred_mask = tf.argmax(pred_mask, axis=-1)
+    # pred_mask = pred_mask[..., tf.newaxis]
+    # return pred_mask[0]
+    pred_mask = pred_mask[0]
+    pred_mask = tf.where(pred_mask>0.5,1,0)
+    return pred_mask
 
+# def show_predictions(dataset=None, num=1, sample_image=None, sample_mask=None):
+#     if dataset:
+#         for image, mask in dataset.take(num):
+#             pred_mask = model.predict(image)
+#             display([image[0], mask[0], create_mask(pred_mask)])
+#     else:
+#         display([sample_image, sample_mask,
+#                 create_mask(model.predict(sample_image[tf.newaxis, ...]))])
 def show_predictions(dataset=None, num=1, sample_image=None, sample_mask=None):
     if dataset:
         for image, mask in dataset.take(num):
             pred_mask = model.predict(image)
             display([image[0], mask[0], create_mask(pred_mask)])
     else:
-        display([sample_image, sample_mask,
+        display([sample_image[:,:,:3], sample_mask,
                 create_mask(model.predict(sample_image[tf.newaxis, ...]))])
 
 class DisplayCallback(tf.keras.callbacks.Callback):
@@ -109,7 +118,12 @@ if __name__ == "__main__":
     .map(Augment())
     .prefetch(buffer_size=tf.data.AUTOTUNE))
 
-    val_batches = val_images.batch(BATCH_SIZE)
+    # for images, masks, faceMask in train_batches.take(1):
+    #     sample_image, sample_mask, sample_faceMask = images[0], masks[0], faceMask[0]
+        # display([sample_image, sample_mask, sample_faceMask])
+    
+    # val_batches = val_images.batch(BATCH_SIZE)
+    val_batches = val_images.batch(BATCH_SIZE).map(AugmentAdditionalMask())
 
     # model = DeepLabV3(IMAGE_HEIGHT, IMAGE_WIDTH, IMAGE_CHANNELS).get_model()
     model = UNet(IMAGE_HEIGHT, IMAGE_WIDTH, IMAGE_CHANNELS).get_model()
@@ -129,16 +143,24 @@ if __name__ == "__main__":
     # tf.keras.utils.plot_model(model, show_shapes=True)
     model.summary()
 
-    for images, masks in val_batches.take(1):
-        sample_image, sample_mask = images[0], masks[0]
+    # for images, masks in val_batches.take(1):
+    #     sample_image, sample_mask = images[0], masks[0]
+
+    for imageWithMask, masks in val_batches.take(1):
+        sample_image = imageWithMask[0,:,:,:3]
+        sample_mask = masks[0]
 
     chechPoint_callback = keras.callbacks.ModelCheckpoint("./detectors/checkpoints/"+MODEL_NAME+"/weights{epoch:04d}.h5",
                                         save_weights_only=False, period=10)
 
+    # model_history = model.fit(train_batches, epochs=EPOCHS,
+    #                         steps_per_epoch=STEPS_PER_EPOCH,
+    #                         validation_data=val_batches,
+    #                         callbacks=[DisplayCallback(sample_image, sample_mask), chechPoint_callback])
     model_history = model.fit(train_batches, epochs=EPOCHS,
                             steps_per_epoch=STEPS_PER_EPOCH,
                             validation_data=val_batches,
-                            callbacks=[DisplayCallback(sample_image, sample_mask), chechPoint_callback])
+                            callbacks=[DisplayCallback(imageWithMask[0], sample_mask), chechPoint_callback])
 
     history_dict = model_history.history
     json.dump(history_dict, open(f"./detectors/checkpoints/{MODEL_NAME}/modelHistory.json", 'w'))
