@@ -18,8 +18,8 @@ We also tried with DeepLabV3+ encoder decoder arhitecture which was shown to wor
 
 ## Evaluation
 We split the dataset into train (750 images) and test (250 images). Additionaly we split train data into real train (85%) and validation set (15%) to track how well our model is doing on unseen data during training.\
-Models with MobileNetV2 backbone where trained for 50 epochs, others where trained for 30 because of the higher computational demands. During training we used batch size of 8. All images were resized to 224*244 before training/evaluation. Example of training and validation loss during training (for model UNet-MobileNetV2):
-![](./detectors/figures/UNet-MobileNetV2/loss.jpg)
+Models with MobileNetV2 backbone where trained for 50 epochs, others where trained for 30 because of the higher computational demands. During training we used batch size of 8. All images were resized to 224*244 before training/evaluation. Example of training and validation loss during training (for model UNet-MobileNetV2): \
+<img src="./detectors/figures/UNet-MobileNetV2/loss.jpg" width="600" height="400" />
 
 To test out models we choose different metrics:
 - Accuracy: (TP+TN) / (TP+TN+FP+FN)
@@ -72,4 +72,5 @@ Our try at a custom model with 4 channel input with original image and face mask
 - Ž. Emeršič, D. Sušanj, B. Meden, P. Peer and V. Štruc, "ContexedNet: Context–Aware Ear Detection in Unconstrained Settings," in IEEE Access, vol. 9, pp. 145175-145190, 2021, doi: 10.1109/ACCESS.2021.3121792.
 - Ronneberger O., Fischer P., Brox T. (2015) U-Net: Convolutional Networks for Biomedical Image Segmentation. In: Navab N., Hornegger J., Wells W., Frangi A. (eds) Medical Image Computing and Computer-Assisted Intervention–MICCAI 2015. MICCAI 2015. Lecture Notes in Computer Science, vol 9351. Springer, Cham. https://doi.org/10.1007/978-3-319-24574-4_28
 - Chen LC., Zhu Y., Papandreou G., Schroff F., Adam H. (2018) Encoder-Decoder with Atrous Separable Convolution for Semantic Image Segmentation. In: Ferrari V., Hebert M., Sminchisescu C., Weiss Y. (eds) Computer Vision – ECCV 2018. ECCV 2018. Lecture Notes in Computer Science, vol 11211. Springer, Cham. https://doi.org/10.1007/978-3-030-01234-2
+- Sthanhng. (n.d.). Sthanhng/Yoloface: Deep learning-based face detection using the Yolov3 Algorithm (https://github.com/sthanhng/yoloface). GitHub. Retrieved December 10, 2021, from https://github.com/sthanhng/yoloface. 
 
