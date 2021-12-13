@@ -18,8 +18,7 @@ We also tried with DeepLabV3+ encoder decoder arhitecture which was shown to wor
 
 ## Evaluation
 We split the dataset into train (750 images) and test (250 images). Additionaly we split train data into real train (85%) and validation set (15%) to track how well our model is doing on unseen data during training.\
-Models with MobileNetV2 backbone where trained for 50 epochs, others where trained for 30 because of the higher computational demands. During training we used batch size of 8. All images were resized to 224*244 before training/evaluation. Example of training and validation loss during training (for model UNet-MobileNetV2): \
-<img src="./detectors/figures/UNet-MobileNetV2/loss.jpg" width="600" height="400" />
+Models with MobileNetV2 backbone where trained for 50 epochs, others where trained for 30 because of the higher computational demands. During training we used batch size of 8. All images were resized to 224*244 before training/evaluation.
 
 To test out models we choose different metrics:
 - Accuracy: (TP+TN) / (TP+TN+FP+FN)
@@ -52,8 +51,16 @@ Results of all models:
 | DeepLabV3+-ResNet50-D |0.9940|0.4699|0.7420|0.5634|0.6405|
 | DeepLabV3+-ResNet50-BC|0.9918|0.2127|0.5913|0.2236|0.3245|
 
+
+Comparison with state of the art:
+| ModelName   | Accuracy    | IoU      |Precision     | Recall |  F1 score |
+| ----------- | ----------- | -----------|-----------|----------- |-----------|
+| UNet-EfficientNetB0-SC |**0.9990**|0.7932|**0.9628**|0.8173|**0.8841**|
+| DeepLabV3+-ResNet(ContexedNet)|0.9974|**0.8146**|0.8907|**0.8747**|0.8826|
+| Mask R-CNN|0.9974|0.7924|0.9204|0.8414|0.8791|
+
 UNet arhitecture with EfficientNetB0 backbone and SparseCategorical CrossEntropy showed the best results in our testing on all metrics. Both DeepLabV3+ and Unet with EfficientNetB0 gave some errors in our training because GPU memory wasn't sufficient. So we can speculate that the results from DeepLabV3+ models aren't doing this arhitecture justic. \
-Our try at a custom model with 4 channel input with original image and face mask image didn't turned out too good. We would have to try different ways of incorporating this additional information to the model so it can learn better. One way is through special fusion blocks in the decoder. Since additional context already showed to be good for this problem, we have some room for improvement.
+Our try at a custom model with 4 channel input with original image and face mask image didn't turned out too good. We would have to try different ways of incorporating this additional information to the model so it can learn better. One way is through special fusion blocks in the decoder. One problem could also be that the bounding box of face detectors isn't always big enought to incorporate ears as well. Maybe it would be better to create a mask which would have radial gradients starting at oposite sides of bounding box. Since additional context already showed to be good for this problem, we have some room for improvement.
 
 ## Qualitative results
 
@@ -70,7 +77,8 @@ Our try at a custom model with 4 channel input with original image and face mask
 - Ž. Emeršič et al., "The Unconstrained Ear Recognition Challenge 2019," 2019 International Conference on Biometrics (ICB), 2019, pp. 1-15, doi: 10.1109/ICB45273.2019.8987337.
 - EMERŠIČ, Žiga; ŠTRUC, Vitomir; PEER, Peter. Ear recognition: More than a survey. Neurocomputing, 2017, 255: 26-39.
 - Ž. Emeršič, D. Sušanj, B. Meden, P. Peer and V. Štruc, "ContexedNet: Context–Aware Ear Detection in Unconstrained Settings," in IEEE Access, vol. 9, pp. 145175-145190, 2021, doi: 10.1109/ACCESS.2021.3121792.
+- Bizjak, Matic & Peer, Peter & Emeršič, Žiga. (2019). Mask R-CNN for Ear Detection. 1624-1628. 10.23919/MIPRO.2019.8756760. 
 - Ronneberger O., Fischer P., Brox T. (2015) U-Net: Convolutional Networks for Biomedical Image Segmentation. In: Navab N., Hornegger J., Wells W., Frangi A. (eds) Medical Image Computing and Computer-Assisted Intervention–MICCAI 2015. MICCAI 2015. Lecture Notes in Computer Science, vol 9351. Springer, Cham. https://doi.org/10.1007/978-3-319-24574-4_28
 - Chen LC., Zhu Y., Papandreou G., Schroff F., Adam H. (2018) Encoder-Decoder with Atrous Separable Convolution for Semantic Image Segmentation. In: Ferrari V., Hebert M., Sminchisescu C., Weiss Y. (eds) Computer Vision – ECCV 2018. ECCV 2018. Lecture Notes in Computer Science, vol 11211. Springer, Cham. https://doi.org/10.1007/978-3-030-01234-2
-- Sthanhng. (n.d.). Sthanhng/Yoloface: Deep learning-based face detection using the Yolov3 Algorithm (https://github.com/sthanhng/yoloface). GitHub. Retrieved December 10, 2021, from https://github.com/sthanhng/yoloface. 
+- Sthanhng. (n.d.). Sthanhng/Yoloface: Deep learning-based face detection using the Yolov3 Algorithm (https://github.com/sthanhng/yoloface). GitHub. Retrieved December 10, 2021, from https://github.com/sthanhng/yoloface.
 

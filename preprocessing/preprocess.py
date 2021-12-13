@@ -36,11 +36,11 @@ def load_image(image_path, isTrain, imageH, imageW):
     input_mask = read_mask(mask_path, imageH, imageW)
     input_faceMask = read_mask(faceMask_path, imageH, imageW)
 
-    # input_image, input_mask = normalize(input_image, input_mask)
-    input_image, input_faceMask, input_mask = normalize3(input_image, input_faceMask, input_mask)
+    input_image, input_mask = normalize(input_image, input_mask)
+    # input_image, input_faceMask, input_mask = normalize3(input_image, input_faceMask, input_mask)
 
-    return input_image, input_mask, input_faceMask
-    # return input_image, input_mask
+    # return input_image, input_mask, input_faceMask
+    return input_image, input_mask
 
 def subset_dataset(dataset, indices):
     return dataset.enumerate().filter(lambda i, t: tf.reduce_any(i == indices)).map(lambda j, u: u)

@@ -21,9 +21,9 @@ BATCH_SIZE = 8
 IMAGE_HEIGHT = 224
 IMAGE_WIDTH = 224
 
-MODEL_NAME = "UNet-MobileNetV2-FL-FaceMask"
-SAVE = True
-VIZ = True
+MODEL_NAME = "UNet-EfficientNetB0-SparseCategoricalCE"
+SAVE = False
+VIZ = False
 
 def display(display_list):
     plt.figure(figsize=(15, 15))
@@ -39,12 +39,12 @@ def display(display_list):
     plt.show()
 
 def create_mask(pred_mask):
-    # pred_mask = tf.argmax(pred_mask, axis=-1)
-    # pred_mask = pred_mask[..., tf.newaxis]
-    # return pred_mask[0]
-    pred_mask = pred_mask[0]
-    pred_mask = tf.where(pred_mask>0.5,1,0)
-    return pred_mask
+    pred_mask = tf.argmax(pred_mask, axis=-1)
+    pred_mask = pred_mask[..., tf.newaxis]
+    return pred_mask[0]
+    # pred_mask = pred_mask[0]
+    # pred_mask = tf.where(pred_mask>0.5,1,0)
+    # return pred_mask
 
 def accuracy(trueMask, predMask):
     tp = np.sum(np.logical_and(trueMask, predMask))
@@ -112,7 +112,7 @@ if __name__ == "__main__":
     # model = keras.models.load_model(f"./detectors/checkpoints/{MODEL_NAME}/weights0050.h5")
 
     # for SigmoidFocalCrossEntropy()
-    model = keras.models.load_model(f"./detectors/checkpoints/{MODEL_NAME}/weights0050.h5", custom_objects={"loss": tfa.losses.SigmoidFocalCrossEntropy()})
+    # model = keras.models.load_model(f"./detectors/checkpoints/{MODEL_NAME}/weights0050.h5", custom_objects={"loss": tfa.losses.SigmoidFocalCrossEntropy()})
     
     # for dice loss
     # model = keras.models.load_model(f"./detectors/checkpoints/{MODEL_NAME}/weights0050.h5", compile=False)
@@ -121,30 +121,16 @@ if __name__ == "__main__":
     #         metrics=['accuracy'])
 
     # Custom all (for efficientNet)
-    # model = UNet(IMAGE_HEIGHT, IMAGE_WIDTH, 3).get_model()
-    # model.load_weights(f"./detectors/checkpoints/{MODEL_NAME}/weights0030.h5")
-    # model.compile(optimizer="adam", loss=tf.losses.SparseCategoricalCrossentropy(from_logits=True), metrics=['accuracy'])
+    model = UNet(IMAGE_HEIGHT, IMAGE_WIDTH, 3).get_model()
+    model.load_weights(f"./detectors/checkpoints/{MODEL_NAME}/weights0030.h5")
+    model.compile(optimizer="adam", loss=tf.losses.SparseCategoricalCrossentropy(from_logits=True), metrics=['accuracy'])
     
     finalAccuracy = finalIoU = finalPrecision = finalRecall = 0
     iouMaskPairs = []
 
-    # for element in tqdm(test_images.as_numpy_iterator()):
-    #     image, trueMask = element
-    #     imageToPredict = image[None, :,:,:]
-    #     predMask = model.predict(imageToPredict)
-    #     predMask = create_mask(predMask)
-       
-    #     finalAccuracy += accuracy(trueMask, predMask)
-    #     currentIoU = iou(trueMask, predMask)
-    #     finalIoU += currentIoU
-    #     finalPrecision += precision(trueMask, predMask)
-    #     finalRecall += recall(trueMask, predMask)
-    #     iouMaskPairs.append((currentIoU, [image, trueMask, predMask]))
-    
     for element in tqdm(test_images.as_numpy_iterator()):
-        image, trueMask, faceMask = element
-        imageWithMask = tf.concat([image, faceMask], axis=-1)
-        imageToPredict = imageWithMask[None, :,:,:]
+        image, trueMask = element
+        imageToPredict = image[None, :,:,:]
         predMask = model.predict(imageToPredict)
         predMask = create_mask(predMask)
        
@@ -154,6 +140,20 @@ if __name__ == "__main__":
         finalPrecision += precision(trueMask, predMask)
         finalRecall += recall(trueMask, predMask)
         iouMaskPairs.append((currentIoU, [image, trueMask, predMask]))
+    
+    # for element in tqdm(test_images.as_numpy_iterator()):
+    #     image, trueMask, faceMask = element
+    #     imageWithMask = tf.concat([image, faceMask], axis=-1)
+    #     imageToPredict = imageWithMask[None, :,:,:]
+    #     predMask = model.predict(imageToPredict)
+    #     predMask = create_mask(predMask)
+       
+    #     finalAccuracy += accuracy(trueMask, predMask)
+    #     currentIoU = iou(trueMask, predMask)
+    #     finalIoU += currentIoU
+    #     finalPrecision += precision(trueMask, predMask)
+    #     finalRecall += recall(trueMask, predMask)
+    #     iouMaskPairs.append((currentIoU, [image, trueMask, predMask]))
 
 
     finalAccuracy /= test_images.cardinality().numpy()
