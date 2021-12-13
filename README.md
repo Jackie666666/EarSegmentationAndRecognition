@@ -18,8 +18,7 @@ We also tried with DeepLabV3+ encoder decoder arhitecture which was shown to wor
 
 ## Evaluation
 We split the dataset into train (750 images) and test (250 images). Additionaly we split train data into real train (85%) and validation set (15%) to track how well our model is doing on unseen data during training.\
-Models with MobileNetV2 backbone where trained for 50 epochs, others where trained for 30 because of the higher computational demands. During training we used batch size of 8. All images were resized to 224*244 before training/evaluation. Example of training and validation loss during training (for model UNet-MobileNetV2): \
-<img src="./detectors/figures/UNet-MobileNetV2/loss.jpg" width="600" height="400" />
+Models with MobileNetV2 backbone where trained for 50 epochs, others where trained for 30 because of the higher computational demands. During training we used batch size of 8. All images were resized to 224*244 before training/evaluation.
 
 To test out models we choose different metrics:
 - Accuracy: (TP+TN) / (TP+TN+FP+FN)
