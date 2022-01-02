@@ -15,7 +15,6 @@ from customLoss import dice_loss
 BASE_PATH = "./data"
 
 TRAIN_DATA_FOLDER = pathlib.Path(BASE_PATH + "/train")
-TRAIN_MASK_FOLDER = pathlib.Path(BASE_PATH + "/annotations/segmentation/train")
 
 IMAGE_HEIGHT = 224
 IMAGE_WIDTH = 224

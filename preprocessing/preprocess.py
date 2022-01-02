@@ -34,7 +34,7 @@ def load_image(image_path, isTrain, imageH, imageW):
         else tf.strings.regex_replace(image_path, 'test', "testFaceMask")
 
     input_mask = read_mask(mask_path, imageH, imageW)
-    input_faceMask = read_mask(faceMask_path, imageH, imageW)
+    # input_faceMask = read_mask(faceMask_path, imageH, imageW)
 
     input_image, input_mask = normalize(input_image, input_mask)
     # input_image, input_faceMask, input_mask = normalize3(input_image, input_faceMask, input_mask)
@@ -51,32 +51,32 @@ class Augment(tf.keras.layers.Layer):
         # both use the same seed, so they'll make the same random changes.
         self.augment_inputs = tf.keras.layers.RandomFlip(mode="horizontal", seed=seed)
         self.augment_labels = tf.keras.layers.RandomFlip(mode="horizontal", seed=seed)
-        self.augment_faceMask = tf.keras.layers.RandomFlip(mode="horizontal", seed=seed)
+        # self.augment_faceMask = tf.keras.layers.RandomFlip(mode="horizontal", seed=seed)
         self.HSV = [0.3, 0.3, 0.3]
 
-    def hsv(self, image, mask, faceMask):
-    # def hsv(self, image, mask):
+    def hsv(self, image, mask):
+    # def hsv(self, image, mask, faceMask):
         if tf.random.uniform([]) < self.HSV[0]:
             image = tf.image.adjust_hue(image, tf.random.uniform([], -0.1, 0.1))
         if tf.random.uniform([]) < self.HSV[1]:
             image = tf.image.adjust_saturation(image, tf.random.uniform([], 0, 2))
         if tf.random.uniform([]) < self.HSV[2]:
             image = tf.image.adjust_brightness(image, tf.random.uniform([], -0.2, 0.2))
-        return image, mask, faceMask
-        # return image, mask
+        return image, mask
+        # return image, mask, faceMask
 
-    def call(self, inputs, labels, faceMask):
-    # def call(self, inputs, labels):
-        # inputs = tfa.image.equalize(inputs)
+    def call(self, inputs, labels):
+    # def call(self, inputs, labels, faceMask):
+        inputs = tfa.image.equalize(inputs)
         inputs = self.augment_inputs(inputs)
         labels = self.augment_labels(labels)
-        faceMask = self.augment_faceMask(faceMask)
+        # faceMask = self.augment_faceMask(faceMask)
 
-        # inputs, labels= self.hsv(inputs, labels)
-        inputs, labels, faceMask = self.hsv(inputs, labels, faceMask)
-        newInput = tf.concat([inputs, faceMask], axis=-1)
-
-        return newInput, labels
+        inputs, labels= self.hsv(inputs, labels)
+        # inputs, labels, faceMask = self.hsv(inputs, labels, faceMask)
+        # newInput = tf.concat([inputs, faceMask], axis=-1)
+        return inputs, labels
+        # return newInput, labels
 
 class AugmentAdditionalMask(tf.keras.layers.Layer):
     def __init__(self, seed=42):
