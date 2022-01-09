@@ -7,7 +7,7 @@ from tensorflow import keras
 from tensorflow._api.v2 import image
 import tensorflow_addons as tfa
 import json
-from preprocessing.preprocess import  Augment, AugmentAdditionalMask, subset_dataset, load_image
+from preprocessing.preprocessDetector import  Augment, AugmentAdditionalMask, subset_dataset, load_image
 from detectors.my_detectors.UNet import UNet
 from detectors.my_detectors.DeepLabV3 import DeepLabV3
 from customLoss import dice_loss
@@ -149,17 +149,17 @@ if __name__ == "__main__":
         sample_image = imageWithMask[0,:,:,:3]
         sample_mask = masks[0]
 
-    chechPoint_callback = keras.callbacks.ModelCheckpoint("./detectors/checkpoints/"+MODEL_NAME+"/weights{epoch:04d}.h5",
+    checkPoint_callback = keras.callbacks.ModelCheckpoint("./detectors/checkpoints/"+MODEL_NAME+"/weights{epoch:04d}.h5",
                                         save_weights_only=False, period=10)
 
     # model_history = model.fit(train_batches, epochs=EPOCHS,
     #                         steps_per_epoch=STEPS_PER_EPOCH,
     #                         validation_data=val_batches,
-    #                         callbacks=[DisplayCallback(sample_image, sample_mask), chechPoint_callback])
+    #                         callbacks=[DisplayCallback(sample_image, sample_mask), checkPoint_callback])
     model_history = model.fit(train_batches, epochs=EPOCHS,
                             steps_per_epoch=STEPS_PER_EPOCH,
                             validation_data=val_batches,
-                            callbacks=[DisplayCallback(imageWithMask[0], sample_mask), chechPoint_callback])
+                            callbacks=[DisplayCallback(imageWithMask[0], sample_mask), checkPoint_callback])
 
     history_dict = model_history.history
     json.dump(history_dict, open(f"./detectors/checkpoints/{MODEL_NAME}/modelHistory.json", 'w'))

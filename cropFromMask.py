@@ -7,7 +7,7 @@ from tensorflow import keras
 import json
 import tensorflow_addons as tfa
 from detectors.my_detectors.UNet import UNet
-from preprocessing.preprocess import load_image
+from preprocessing.preprocessDetector import load_image
 from tqdm import tqdm
 from customLoss import dice_loss
 import cv2

@@ -149,3 +149,5 @@ Mask_RCNN/
 detectors/checkpoints/
 detectors/figures/
 EfficientUnet/
+feature_extractors/checkpoints/
+feature_extractors/figures/
