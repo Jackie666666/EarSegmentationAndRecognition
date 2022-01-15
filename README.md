@@ -90,5 +90,6 @@ Our try at a custom model with 4 channel input with original image and face mask
 
 ## Ear Recognition 
 
+## TODO AFTER EXAM PERIOD :)
 ### Literature
 - Emeršič, Žiga & Štruc, Vitomir & Peer, Peter. (2017). Ear Recognition: More Than a Survey. Neurocomputing. 255. 10.1016/j.neucom.2016.08.139. 
