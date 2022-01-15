@@ -23,7 +23,7 @@ VAL_RATIO = 0.15
 BATCH_SIZE = 16
 EPOCHS = 50
 
-MODEL_NAME = "VGG16-50E-myEars"
+MODEL_NAME = "ResNet101-50E-myEars"
 
 def filenamesAndLabels(path, train=True):
     filenames = ["train/"+x for x in os.listdir(path)] if train else ["test/"+x for x in os.listdir(path)]
@@ -93,56 +93,20 @@ if __name__ == "__main__":
     #     break
         
     # model = CustomNet(IMAGE_HEIGHT, IMAGE_WIDTH, 3).build_model()
-    # model = VGG16(IMAGE_HEIGHT, IMAGE_WIDTH, 3).build_model()
-    # model.compile(optimizer=tf.keras.optimizers.Adam(),
-    #             loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False),
-    #             metrics=['accuracy'])
-    # model.summary()
-
-    # checkPoint_callback = tf.keras.callbacks.ModelCheckpoint("./feature_extractors/checkpoints/"+MODEL_NAME+"/weights{epoch:04d}.h5",
-    #                                 save_weights_only=False, period=10)
-
-    # model_history = model.fit(train_batches, epochs=EPOCHS,steps_per_epoch=STEPS_PER_EPOCH,
-    #                 validation_data=val_batches, callbacks=[checkPoint_callback])
-
-    # history_dict = model_history.history
-    # json.dump(history_dict, open(f"./feature_extractors/checkpoints/{MODEL_NAME}/modelHistory.json", 'w'))
-
-    # loss = model_history.history['loss']
-    # val_loss = model_history.history['val_loss']
-
-    # plt.figure()
-    # plt.plot(model_history.epoch, loss, 'r', label='Training loss')
-    # plt.plot(model_history.epoch, val_loss, 'b', label='Validation loss')
-    # plt.title('Training and Validation Loss')
-    # plt.xlabel('Epoch')
-    # plt.ylabel('Loss Value')
-    # plt.legend()
-    # plt.tight_layout()
-    # plt.savefig(f"./feature_extractors/figures/{MODEL_NAME}/loss.jpg")
-
-    # # print("FINE-TUNING")
-    model = tf.keras.models.load_model(f"./feature_extractors/checkpoints/{MODEL_NAME}/weights0050.h5")
-    
-    for layer in model.layers:
-        if isinstance(layer, tf.keras.layers.BatchNormalization):
-            layer.trainable = False
-        else:
-            layer.trainable = True
-    
-    model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.0001),
-            loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False),
-            metrics=['accuracy'])
+    model = ResNet101(IMAGE_HEIGHT, IMAGE_WIDTH, 3).build_model()
+    model.compile(optimizer=tf.keras.optimizers.Adam(),
+                loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False),
+                metrics=['accuracy'])
     model.summary()
-    
+
+    checkPoint_callback = tf.keras.callbacks.ModelCheckpoint("./feature_extractors/checkpoints/"+MODEL_NAME+"/weights{epoch:04d}.h5",
+                                    save_weights_only=False, period=10)
+
     model_history = model.fit(train_batches, epochs=EPOCHS,steps_per_epoch=STEPS_PER_EPOCH,
-            validation_data=val_batches, 
-            callbacks=[EarlyStopping(monitor="val_loss", patience=5, restore_best_weights=True)]
-        )
-    model.save("./feature_extractors/checkpoints/"+MODEL_NAME+"/weightsLast.h5")
+                    validation_data=val_batches, callbacks=[checkPoint_callback])
 
     history_dict = model_history.history
-    json.dump(history_dict, open(f"./feature_extractors/checkpoints/{MODEL_NAME}/modelHistory2.json", 'w'))
+    json.dump(history_dict, open(f"./feature_extractors/checkpoints/{MODEL_NAME}/modelHistory.json", 'w'))
 
     loss = model_history.history['loss']
     val_loss = model_history.history['val_loss']
@@ -155,4 +119,40 @@ if __name__ == "__main__":
     plt.ylabel('Loss Value')
     plt.legend()
     plt.tight_layout()
-    plt.savefig(f"./feature_extractors/checkpoints/{MODEL_NAME}/loss2.jpg")
+    plt.savefig(f"./feature_extractors/figures/{MODEL_NAME}/loss.jpg")
+
+    # # print("FINE-TUNING")
+    # model = tf.keras.models.load_model(f"./feature_extractors/checkpoints/{MODEL_NAME}/weights0050.h5")
+    
+    # for layer in model.layers:
+    #     if isinstance(layer, tf.keras.layers.BatchNormalization):
+    #         layer.trainable = False
+    #     else:
+    #         layer.trainable = True
+    
+    # model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.0001),
+    #         loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False),
+    #         metrics=['accuracy'])
+    # model.summary()
+    
+    # model_history = model.fit(train_batches, epochs=EPOCHS,steps_per_epoch=STEPS_PER_EPOCH,
+    #         validation_data=val_batches, 
+    #         callbacks=[EarlyStopping(monitor="val_loss", patience=5, restore_best_weights=True)]
+    #     )
+    # model.save("./feature_extractors/checkpoints/"+MODEL_NAME+"/weightsLast.h5")
+
+    # history_dict = model_history.history
+    # json.dump(history_dict, open(f"./feature_extractors/checkpoints/{MODEL_NAME}/modelHistory2.json", 'w'))
+
+    # loss = model_history.history['loss']
+    # val_loss = model_history.history['val_loss']
+
+    # plt.figure()
+    # plt.plot(model_history.epoch, loss, 'r', label='Training loss')
+    # plt.plot(model_history.epoch, val_loss, 'b', label='Validation loss')
+    # plt.title('Training and Validation Loss')
+    # plt.xlabel('Epoch')
+    # plt.ylabel('Loss Value')
+    # plt.legend()
+    # plt.tight_layout()
+    # plt.savefig(f"./feature_extractors/checkpoints/{MODEL_NAME}/loss2.jpg")

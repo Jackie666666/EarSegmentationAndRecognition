@@ -27,4 +27,3 @@ if __name__ == '__main__':
 	img = cv2.imread(fname)
 	extractor = LBP()
 	features = extractor.extract(img)
-	print(features)

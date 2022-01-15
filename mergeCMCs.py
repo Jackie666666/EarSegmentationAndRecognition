@@ -15,6 +15,7 @@ if __name__ == "__main__":
     for currFile in files:
         currData = np.loadtxt(os.path.join(RESULTS_PATH, currFile))
         temp = currFile.split("-")
+
         # if "ResNet101" in temp[0]:
         #     if "myEars" in currFile:
         #         data.append(currData)

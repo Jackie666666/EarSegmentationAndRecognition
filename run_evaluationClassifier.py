@@ -18,7 +18,7 @@ ANOTATIONS_PATH = "./data/annotations/recognition/ids.csv"
 IMAGE_HEIGHT = 224
 IMAGE_WIDTH = 224
 
-MODEL_NAME = "VGG16-50E-myEars"
+MODEL_NAME = "ResNet101-50E-myEars-NoAug"
 
 def filenamesAndLabels(path, train=True):
     filenames = ["train/"+x for x in os.listdir(path)] if train else ["test/"+x for x in os.listdir(path)]
@@ -60,9 +60,9 @@ if __name__ == "__main__":
     dataset_test = tf.data.Dataset.from_tensor_slices((filenames, labels))
     test_images = dataset_test.map(lambda x, y: load_image(x, y, IMAGE_HEIGHT, IMAGE_WIDTH), num_parallel_calls=tf.data.AUTOTUNE)
     
-    # model = tf.keras.models.load_model(f"./feature_extractors/checkpoints/{MODEL_NAME}/weights0050.h5")
+    model = tf.keras.models.load_model(f"./feature_extractors/checkpoints/{MODEL_NAME}/weights0050.h5")
     # For transfer learning
-    model = tf.keras.models.load_model(f"./feature_extractors/checkpoints/{MODEL_NAME}/weightsLast.h5")
+    # model = tf.keras.models.load_model(f"./feature_extractors/checkpoints/{MODEL_NAME}/weightsLast.h5")
 
     ranks = np.zeros(99)
     for element in tqdm(test_images.as_numpy_iterator()):
@@ -73,4 +73,4 @@ if __name__ == "__main__":
             ranks[i-1] += calcRankN(labelsProbs, label, n=i)
 
     ranks /= len(filenames)
-    displayCMC(ranks, save=True, saveName="CMC-FT")
+    displayCMC(ranks, save=True, saveName="CMC")
